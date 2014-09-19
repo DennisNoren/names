@@ -37,7 +37,8 @@ shinyServer(function(input, output, session) {
 
 # extract data for first selected name
   names1 <- reactive({
-    baby <- subset(babynames, name == simpleCap(input$nameID1) & sex == input$gender1)
+    baby <- subset(babynames, name == simpleCap(input$nameID1)
+                   & sex == input$gender1)
     if (dim(baby)[1] < 134) {baby2 <- fullProfile(baby) }
     else baby2 <- baby
     return(baby2)
@@ -45,7 +46,8 @@ shinyServer(function(input, output, session) {
   
 # extract data for second selected name
   names2 <- reactive({
-    baby <- subset(babynames, name == simpleCap(input$nameID2) & sex == input$gender2)
+    baby <- subset(babynames, name == simpleCap(input$nameID2) 
+                   & sex == input$gender2)
     if (dim(baby)[1] < 134) {baby2 <- fullProfile(baby) }
     else baby2 <- baby
     return(baby2)
@@ -69,6 +71,7 @@ shinyServer(function(input, output, session) {
                 bwf2 <- bwfilter(n2$perc, freq = input$filtfreq, nfix = 2)
                 n2$plot <- bwf2$trend}  # high pass Butterworth filter
            )
+
     smoothed <- rbind(n1, n2)
     return(smoothed)
   })
@@ -113,39 +116,40 @@ shinyServer(function(input, output, session) {
     rpd2 <- rpd[rpd$name == simpleCap(input$nameID2),]
     rpdif <- merge(rpd1, rpd2, by = "year")
     rpdif$diff <- rpdif$plot.x - rpdif$plot.y
-#    alph_flag <- as.logical(rpd1$name[1] < rpd2$name[1])
-#    rpdif$sign <- ifelse((alph_flag),
-#                          factor(sign(rpdif$diff)),
-#                          factor(rev(levels(sign(rpdif$diff))))
-#                   )
-    rpdif$sign <- factor(sign(rpdif$diff))
-#    rpdif$sign <- factor(rev(levels(sign(rpdif$diff))))
-#     rpdif$sign <- factor(-1)
+    rpdif$sign <- sign(rpdif$diff)
+    if(rpd1$name[1] < rpd2$name[1]) {
+            rpdif$sign <- factor(rpdif$sign, levels = c(-1, 0, 1))
+            }
+    else
+            {rpdif$sign <- factor(rpdif$sign, levels = c(1, 0, -1))
+            rpdif$diff <- -rpdif$diff}
     ranged <- range(rpdif$diff)
 
     p <- ggplot(data= rpdif, aes(x=year, y=diff, fill=sign, color=sign),
-                environment = environment()) + 
+#                environment = environment()) + 
+                ) + 
       ggtitle("") +
       scale_x_continuous(limits = c(input$yearRange[1], input$yearRange[2])) +
 
-      xlab("Year of Birth") + ylab("Difference") +
+      xlab("") + ylab("Difference") +
 # colors taken from colorblind palette cb_pallette
-# TBR: need to account for factor function alphabetizing its codes
-  # as colors are flipping based on that
       scale_fill_manual(values = c("#E69F00", "#0072B2", "#0072B2")) +
       scale_color_manual(values = c("#E69F00", "#0072B2", "#0072B2"))
 
-      p <- p + theme(axis.text = element_text(face = "bold", size=15),
-        axis.title.x = element_text(face = "bold", size=15, vjust = -1.0),
-        axis.title.y = element_text(face = "bold", size = 20, vjust = 2.0),
-        legend.position = "none") +
-  geom_area(ymin = ranged[1], ymax = ranged[2], position = "identity")
-#      geom_line(aes(color = "black"))
-     print(p)
+      p <- p + 
+        theme(
+          axis.text = element_text(face = "bold", size=15),
+          axis.title.x = element_text(face = "bold", size=15, vjust = -1.0),
+          axis.title.y = element_text(face = "bold", size = 20, vjust = 2.0),
+          legend.position = "none") +
+        geom_area(ymin = ranged[1], ymax = ranged[2], position = "identity")
+      p <- p + geom_hline(yintercept=0)
+      p <- p +  geom_line(color = "black")
+      print(p)
    }) # end diffPlot renderPlot
     
-# can also use bPaginate = FALSE to disable pagination
-#   but don't do that here, as number of records would take long time to display
+# in renderDataTable, can also use bPaginate = FALSE to disable pagination
+#   but don't do that here, as number of records would take very long to display
   output$tabl <- renderDataTable({
     nameDT <- data.table(babynames)
     setnames(nameDT, "year", "Year")
@@ -168,17 +172,18 @@ shinyServer(function(input, output, session) {
            Y = {
              nameDT[sex==input$genderL & Percent >= input$minPercent &
              Year >= input$yearRangeL[1] & Year <= input$yearRangeL[2], 
-             round(mean(Percent),4), 
+             round(sum(Percent),4), 
              by = Year]
            },
-           M = {nameDT[sex==input$genderL & Percent >= input$minPercent &
+           M = {
+             nameDT[sex==input$genderL & Percent >= input$minPercent &
              Year >= input$yearRangeL[1] & Year <= input$yearRangeL[2], 
              round(mean(Percent),4), 
              by = Name]
            },
            N = { # no aggregation, that is, each Year/Name combination
              nameDT[sex==input$genderL & Percent >= input$minPercent &
-                 Year >= input$yearRangeL[1] & Year <= input$yearRangeL[2]]
+             Year >= input$yearRangeL[1] & Year <= input$yearRangeL[2]]
            }
     ) # end switch
 
@@ -206,6 +211,40 @@ shinyServer(function(input, output, session) {
     s <- sum(names2()$n)
     p2 <- paste0("Total namings: ", s)
     HTML(paste(p1, p2, sep = '<br/>'))
+  })
+
+# acknowledgments, on separate tab
+  output$acks <- renderUI({
+    str1 <- "Data source, U.S. Social Security Administration"
+    str2 <- "http://www.ssa.gov/oact/babynames/limits.html"
+    str3 <- "The 'babynames' R package was authored by Hadley Wickham"
+    str4 <- "The babynames shiny scripts from Garrett Grolemund
+were used as baseline for this shiny app"
+    str5 <- "Acknowledgements from the Social Security Administration:"
+    str6 <- "1. Names are restricted to cases where the year of birth, sex, 
+    State of birth (50 States and District of Columbia) are on record, and
+    where the given name is at least 2 characters long."
+    str7 <- "2. Name data are not edited. For example, the sex associated with 
+    a name may be incorrect. Entries such as 'Unknown' and 'Baby' are not 
+    removed from the lists."
+    str8 <- "3. Different spellings of similar names are not combined. For 
+    example, the names Caitlin, Caitlyn, Kaitlin, Kaitlyn, Kaitlynn, Katelyn, 
+    and Katelynn are considered separate names and each has its own rank."
+    str9 <- "4. When two different names are tied with the same frequency for 
+    a given year of birth, we break the tie by assigning rank in alphabetical 
+    order."
+    str10 <- "5. Some names are applied to both males and females (for example, 
+    Micah). Our rankings are done by sex, so that a name such as Micah will
+    have a different rank for males as compared to females. When you seek 
+    the popularity of a specific name (see 'Popularity of a Name'), you can 
+    specify the sex. If you do not specify the sex, we provide rankings for 
+    the more popular name-sex combination."
+
+    blk1 <- HTML(paste(str1, str2, sep = '<br/>'))
+    blk2 <- HTML(paste(str3, str4, sep = '<br/>'))
+    blk3 <- HTML(paste(str5,str6,str7,str8,str9,str10, sep = '<br/>'))
+    HTML(paste(blk1, blk2, blk3, sep = '<br/><br/>'))
+
   })
 
 # check to see if too many records returned from input data frame

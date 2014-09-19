@@ -5,6 +5,7 @@ shinyUI(fluidPage(
   
   titlePanel("Given Names in USA"), 
   
+
   sidebarLayout(
     sidebarPanel( width = 3,
       
@@ -24,7 +25,7 @@ shinyUI(fluidPage(
           , value = "Clyde"
       ),
       h5(htmlOutput("stat2")),
-     br(),
+      br(),
       sliderInput("yearRange", "Range of Years:", 1880, 2013, c(1880, 2013)
                   , step = NULL, round = FALSE, format = "###0."
                   , locale = "us", ticks = TRUE, animate = FALSE, width = NULL),
@@ -43,10 +44,10 @@ shinyUI(fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel("Profiles",
-                 plotOutput("namePlot", height = 380),
-                 plotOutput("diffPlot", height = 280),
-                 htmlOutput("error1")
-          ), # end Profiles tabPanel
+          plotOutput("namePlot", height = 380),
+          plotOutput("diffPlot", height = 280),
+          htmlOutput("error1")
+        ), # end Profiles tabPanel
         tabPanel("Lists",
           fluidRow(
             column(4,
@@ -78,7 +79,10 @@ shinyUI(fluidPage(
             )
           ),  # end third fluidRow
           dataTableOutput("tabl")
-        ) # end Lists tabPanel
+        ), # end Lists tabPanel
+        tabPanel("Acknowledgments",
+          h4(htmlOutput("acks"))
+        ) # end Acknowledgments tabPanel
       )  # end tabsetPanel
     ) # end mainPanel
   )
