@@ -5,7 +5,6 @@ shinyUI(fluidPage(
   
   titlePanel("Given Names in USA"), 
   
-
   sidebarLayout(
     sidebarPanel( width = 3,
       
@@ -39,14 +38,18 @@ shinyUI(fluidPage(
     sliderInput("filtfreq", "Filter frequency:", 4, 15, 8
                   , step = NULL, round = FALSE, format = "0"
                   , locale = "us", ticks = TRUE, animate = FALSE, width = NULL)
-    ), # end sidebarPanel
+
+), # end sidebarPanel
 
     mainPanel(
-      tabsetPanel(
+      tabsetPanel(type = "pills",
+        tabPanel("Acknowledgments",
+          h4(htmlOutput("acks"))
+        ), # end Acknowledgments tabPanel
         tabPanel("Profiles",
+          htmlOutput("error1"),
           plotOutput("namePlot", height = 380),
-          plotOutput("diffPlot", height = 280),
-          htmlOutput("error1")
+          plotOutput("diffPlot", height = 280)
         ), # end Profiles tabPanel
         tabPanel("Lists",
           fluidRow(
@@ -79,10 +82,7 @@ shinyUI(fluidPage(
             )
           ),  # end third fluidRow
           dataTableOutput("tabl")
-        ), # end Lists tabPanel
-        tabPanel("Acknowledgments",
-          h4(htmlOutput("acks"))
-        ) # end Acknowledgments tabPanel
+        ) # end Lists tabPanel
       )  # end tabsetPanel
     ) # end mainPanel
   )
