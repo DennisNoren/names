@@ -74,7 +74,8 @@ shinyServer(function(input, output, session) {
                 bwf2 <- bwfilter(n2$perc, freq = input$filtfreq, nfix = 2)
                 n2$plot <- bwf2$trend}  # high pass Butterworth filter
            )
-
+    n1color <- "#0072B2"; n1$color <- n1color
+    n2color <- "#E69F00"; n2$color <- n2color
 # insert synthetic data point where time series cross
     pcompare <- n2$plot - n1$plot
     pcompsign <- sign(pcompare)
@@ -91,14 +92,16 @@ shinyServer(function(input, output, session) {
                               n = n1$prop[1],
                               prop = pn1synth,
                               perc = pn1synth,
-                              plot = pn1synth)
+                              plot = pn1synth,
+                              color = n1color)
     pn2synthrec <- data.frame(year = pyrsynth,
                               sex = n2$sex[1],
                               name = n2$name[1],
                               n = n2$prop[1],
                               prop = pn1synth,
                               perc = pn1synth,
-                              plot = pn1synth)
+                              plot = pn1synth,
+                              color = n2color)
     n1 <- rbind(n1, pn1synthrec)
     n1 <- n1[order(n1$year),]
     n2 <- rbind(n2, pn2synthrec)
@@ -108,22 +111,23 @@ shinyServer(function(input, output, session) {
     return(smoothed)
   })
 
-# render the main plot for the two selected names
+# render the profile plot for the two selected names
   output$namePlot <- renderPlot({
+    .e <- environment()
     rp <- smoothed()
-#    maxpt <- max(dim(names1())[1], dim(names2()[1]))
     maxp <<- max(rp[rp$year >= input$yearRange[1] &
                   rp$year <= input$yearRange[2], 7])
     rp$Profile <- paste0(rp$name, " (", rp$sex, ")")
-
-    p <- ggplot(data= rp, aes(x=year, y=plot, group = name,
-                        color = name), environment = environment()) + 
-      ggtitle("Year of Birth") +
+    n1color <- "#0072B2"
+    n2color <- "#E69F00"
+    p <- ggplot(data= rp, aes(x=year, y=plot, group = Profile,
+                        color = Profile), environment = .e)
+    p <- p + ggtitle("Year of Birth") +
       scale_x_continuous(limits = c(input$yearRange[1], input$yearRange[2])) +
       scale_y_continuous(limits = c(0.0, maxp)) +
       xlab("") + ylab("Percent within Gender") +
 # colors taken from colorblind palette cb_pallette
-      scale_color_manual(values = c("#0072B2", "#E69F00", "#0072B2")) +
+      scale_color_manual(values = c("#0072B2", "#E69F00")) +
       theme(title = element_text(face = "bold", size = 15, vjust = 1.0),
         axis.text = element_text(face = "bold", size=15),
         axis.title.y = element_text(face = "bold", size = 20, vjust = 2.0),
@@ -133,15 +137,15 @@ shinyServer(function(input, output, session) {
         legend.title = element_text(size = 0),
         legend.text = element_text(face = "bold", size =15)) +
 
-      geom_line(data = rp[rp$name == simpleCap(input$nameID1),], size = 1.5, 
-        aes(color = name)) + 
-      geom_line(data = rp[rp$name == simpleCap(input$nameID2),], size = 1.5, 
-        aes(color = name))
+        geom_line(data = rp[rp$name == simpleCap(input$nameID1),], size = 1.5, 
+          aes(color = Profile)) +
+        geom_line(data = rp[rp$name == simpleCap(input$nameID2),], size = 1.5, 
+          aes(color = Profile))
     print(p)
   }) # end namePlot renderPlot
 
 # render the difference plot for the two selected names
-# 'smoothed() object should have rows for all years of these two names
+# 'smoothed()' object will have rows for all years of these two names
   output$diffPlot <- renderPlot({
     rpd <- smoothed()
     rpd1 <- rpd[rpd$name == simpleCap(input$nameID1),]
@@ -149,29 +153,18 @@ shinyServer(function(input, output, session) {
     rpdif <- merge(rpd1, rpd2, by = "year")
     rpdif$diff <- rpdif$plot.x - rpdif$plot.y
     rpdif$sign <- sign(rpdif$diff)
-    if(rpd1$name[1] < rpd2$name[1]) {
-            rpdif$sign <- factor(rpdif$sign, levels = c(-1, 0, 1))
-            }
-    else
-            {rpdif$sign <- factor(rpdif$sign, levels = c(1, 0, -1))
-            rpdif$diff <- -rpdif$diff}
-    ranged <- range(rpdif$diff)
-    difmin <- ranged[1]
-    difmax <- ranged[2]
+
     rpdif$pos <- with(rpdif, pmax(0, diff))
     rpdif$neg <- with(rpdif, pmin(0, diff))
-
-#     p <- ggplot(data= rpdif, aes(x=year, y=diff, fill=sign, color=sign,
-#                                  order=sign),
-    p <- ggplot(data= rpdif, aes(x=year), 
-                ) + 
+    posCol <- ifelse(rpdif$name.x[1] < rpdif$name.y[1], "#0072B2", "#E69F00")
+    negCol <- ifelse(rpdif$name.x[1] < rpdif$name.y[1], "#E69F00", "#0072B2")
+    p <- ggplot(data= rpdif, aes(x=year), ) + 
       ggtitle("") +
       scale_x_continuous(limits = c(input$yearRange[1], input$yearRange[2])) +
 
       xlab("") + ylab("Difference") +
 # colors taken from colorblind palette cb_pallette
-#       scale_fill_manual(values = c("#E69F00", "#0072B2", "#0072B2")) +
-       scale_color_manual(values = c("#E69F00", "#0072B2", "#0072B2"))
+       scale_color_manual(values = c("#E69F00", "#0072B2"))
 
       p <- p + 
         theme(
@@ -179,8 +172,8 @@ shinyServer(function(input, output, session) {
           axis.title.x = element_text(face = "bold", size=15, vjust = -1.0),
           axis.title.y = element_text(face = "bold", size = 20, vjust = 2.0),
           legend.position = "none") +
-        geom_ribbon(aes(ymin = 0, ymax = pos), fill= "#0072B2") +
-        geom_ribbon(aes(ymin = neg, ymax = 0), fill = "#E69F00")
+        geom_ribbon(aes(ymin = 0, ymax = pos), fill = posCol) +
+        geom_ribbon(aes(ymin = neg, ymax = 0), fill = negCol)
       p <- p + geom_hline(yintercept=0)
       p <- p +  geom_line(aes(y = pos), color = "black")
       p <- p +  geom_line(aes(y = neg), color = "black")
@@ -195,7 +188,7 @@ shinyServer(function(input, output, session) {
     setnames(nameDT, "name", "Name")
     setnames(nameDT, "n", "Count")
     nameDT[, Percent := round(prop*100,3)]
-    nameDT[,prop := NULL]
+    nameDT[, prop := NULL]
     if (input$sortL == "Y") {
       setkey(nameDT, Year, Percent)
       nameDT <- nameDT[,.SD[order(-Year, -Percent)]] 
@@ -211,13 +204,15 @@ shinyServer(function(input, output, session) {
            Y = {  # aggregate by Year
              nameDT[sex==input$genderL & Percent >= input$minPercent &
              Year >= input$yearRangeL[1] & Year <= input$yearRangeL[2], 
-             round(sum(Percent),4), 
+             j = list(Sum_Pct = round(sum(Percent),4)), 
              by = Year]
            },
            M = {  # aggregate by Name
              nameDT[sex==input$genderL & Percent >= input$minPercent &
              Year >= input$yearRangeL[1] & Year <= input$yearRangeL[2], 
-             round(mean(Percent),4), 
+             j = list(Avg_Pct = round(mean(Percent),4),
+                      Min_Pct = round(min(Percent),4),
+                      Max_Pct = round(max(Percent),4)), 
              by = Name]
            },
            N = { # no aggregation, that is, each Year/Name combination
@@ -229,8 +224,8 @@ shinyServer(function(input, output, session) {
     },
 
     options = list(
-      aLengthMenu = c(10, 40, 100),
-      iDisplayLength = 10,
+      aLengthMenu = c(12, 40, 100),
+      iDisplayLength = 12,
       bFilter = FALSE
     )
   ) # end renderDataTable

@@ -26,6 +26,6 @@ were used as baseline for this shiny app."
     specify the sex. If you do not specify the sex, we provide rankings for 
     the more popular name-sex combination."
 
-    blk1 <- HTML(paste(str1, str2, sep = '<br/>'))
-    blk2 <- HTML(paste(str3, str4, str5, sep = '<br/>'))
+    blk1 <- HTML(paste(str3, str4, str5, sep = '<br/>'))
+    blk2 <- HTML(paste(str1, str2, sep = '<br/>'))
     blk3 <- HTML(paste(str6,str7,str8,str9,str10, str11, sep = '<br/>'))
